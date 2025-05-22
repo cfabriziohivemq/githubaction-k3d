@@ -13,11 +13,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: check files
-        run: ls -la
+
       - name: Build and use local action
         id: k3d
-        uses: ./  # Uses the action from the repository root
+        uses: ./k3d-github-action  # Uses the action from the repository root
         with:
           cluster-name: test-k3d-cluster
           k3s-version: latest
