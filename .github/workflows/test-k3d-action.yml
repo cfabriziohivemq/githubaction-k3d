@@ -13,7 +13,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+      - name: check files
+        run: ls -la
       - name: Build and use local action
         id: k3d
         uses: ./  # Uses the action from the repository root
