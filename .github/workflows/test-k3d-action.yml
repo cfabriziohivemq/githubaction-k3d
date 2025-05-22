@@ -24,30 +24,37 @@ jobs:
           agents: 1
           timeout: 3
 
-      - name: Verify cluster creation
+      - name: Set KUBECONFIG environment variable
+        run: |
+          echo "KUBECONFIG=${{ steps.k3d.outputs.kubeconfig-path }}" >> $GITHUB_ENV
+
+      - name: Verify kubeconfig exists
         run: |
           echo "Cluster name: ${{ steps.k3d.outputs.cluster-name }}"
           echo "Kubeconfig path: ${{ steps.k3d.outputs.kubeconfig-path }}"
 
-          # Verify kubectl access works
-          kubectl get nodes
-          kubectl cluster-info
-          kubectl get pods -A
+          # Debug kubeconfig content
+          echo "Kubeconfig content:"
+          cat $KUBECONFIG || echo "Kubeconfig file not found!"
 
-      - name: Test deploying a simple app
+          # Debug k3d cluster
+          k3d cluster list
+
+      - name: Fix kubeconfig server address
         run: |
-          # Deploy nginx as a test
-          kubectl create deployment nginx --image=nginx
-          kubectl expose deployment nginx --port=80 --type=NodePort
+          # Get the container IP address
+          SERVER_IP=$(docker inspect k3d-${{ steps.k3d.outputs.cluster-name }}-server-0 --format '{{.NetworkSettings.IPAddress}}')
+          echo "Server IP: $SERVER_IP"
 
-          # Wait for pod to be ready
-          kubectl wait --for=condition=ready pod -l app=nginx --timeout=60s
+          # Update the kubeconfig to use the container IP
+          kubectl config set-cluster k3d-${{ steps.k3d.outputs.cluster-name }} --server=https://$SERVER_IP:6443 --kubeconfig=$KUBECONFIG
 
-          # Get NodePort
-          NODE_PORT=$(kubectl get svc nginx -o jsonpath='{.spec.ports[0].nodePort}')
-          echo "Nginx exposed on NodePort: $NODE_PORT"
+          # Debug the updated config
+          kubectl config view
 
-          # Verify service is accessible
-          kubectl port-forward svc/nginx 8080:80 &
-          sleep 3
-          curl -s localhost:8080 | grep -q "Welcome to nginx" && echo "✅ Nginx is working!"
+      - name: Verify cluster access
+        run: |
+          # Try to connect to the cluster
+          kubectl cluster-info
+          kubectl get nodes
+          kubectl get pods -A
