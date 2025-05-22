@@ -1,0 +1,46 @@
+name: 'K3d Cluster Setup'
+description: 'Create a k3d Kubernetes cluster for testing'
+author: 'Your Name'
+
+inputs:
+  cluster-name:
+    description: 'Name of the k3d cluster'
+    required: false
+    default: 'test-cluster'
+  k3s-version:
+    description: 'Version of k3s to use (e.g., v1.22.5, latest)'
+    required: false
+    default: 'latest'
+  ports:
+    description: 'Comma-separated list of ports to expose (e.g., "8080:80,8443:443")'
+    required: false
+    default: ''
+  agents:
+    description: 'Number of agent nodes'
+    required: false
+    default: '0'
+  timeout:
+    description: 'Timeout in minutes'
+    required: false
+    default: '5'
+
+outputs:
+  cluster-name:
+    description: 'Name of the created cluster'
+  kubeconfig-path:
+    description: 'Path to the kubeconfig file'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
+  args:
+    - '--name'
+    - ${{ inputs.cluster-name }}
+    - '--version'
+    - ${{ inputs.k3s-version }}
+    - '--ports'
+    - ${{ inputs.ports }}
+    - '--agents'
+    - ${{ inputs.agents }}
+    - '--timeout'
+    - ${{ inputs.timeout }}m

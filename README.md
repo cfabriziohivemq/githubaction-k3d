@@ -1,2 +1,2 @@
-# githubaction-k3d
-Action for creating a k3d
+# INTRO
+This is a Github Action needed for creating a k3d cluster with a specific version.

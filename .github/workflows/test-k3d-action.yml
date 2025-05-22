@@ -1,0 +1,53 @@
+name: Test K3d GitHub Action
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-k3d-action:
+    name: Test K3d Cluster Setup
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Build and use local action
+        id: k3d
+        uses: ./  # Uses the action from the repository root
+        with:
+          cluster-name: test-k3d-cluster
+          k3s-version: latest
+          ports: 8080:80
+          agents: 1
+          timeout: 3
+
+      - name: Verify cluster creation
+        run: |
+          echo "Cluster name: ${{ steps.k3d.outputs.cluster-name }}"
+          echo "Kubeconfig path: ${{ steps.k3d.outputs.kubeconfig-path }}"
+
+          # Verify kubectl access works
+          kubectl get nodes
+          kubectl cluster-info
+          kubectl get pods -A
+
+      - name: Test deploying a simple app
+        run: |
+          # Deploy nginx as a test
+          kubectl create deployment nginx --image=nginx
+          kubectl expose deployment nginx --port=80 --type=NodePort
+
+          # Wait for pod to be ready
+          kubectl wait --for=condition=ready pod -l app=nginx --timeout=60s
+
+          # Get NodePort
+          NODE_PORT=$(kubectl get svc nginx -o jsonpath='{.spec.ports[0].nodePort}')
+          echo "Nginx exposed on NodePort: $NODE_PORT"
+
+          # Verify service is accessible
+          kubectl port-forward svc/nginx 8080:80 &
+          sleep 3
+          curl -s localhost:8080 | grep -q "Welcome to nginx" && echo "✅ Nginx is working!"
